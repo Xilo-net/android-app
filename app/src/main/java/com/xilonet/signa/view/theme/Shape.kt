@@ -1,4 +1,4 @@
-package com.xilonet.signa.ui.theme
+package com.xilonet.signa.view.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Shapes

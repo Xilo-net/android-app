@@ -1,6 +1,5 @@
-package com.xilonet.signa.ui
+package com.xilonet.signa.view
 
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -21,11 +20,11 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xilonet.signa.R
-import com.xilonet.signa.ui.theme.SignaDark
-import com.xilonet.signa.ui.theme.SignaLight
+import com.xilonet.signa.view.theme.SignaDark
+import com.xilonet.signa.view.theme.SignaLight
 
 @Composable
-fun LoginUI(){
+fun LoginUI(goToScreen: (MainActivity.Screens) -> Unit){
     // From top to bottom:
     Column(
         verticalArrangement = Arrangement.Top,
@@ -42,17 +41,20 @@ fun LoginUI(){
     ) {
         LoginScreenButton(
             text = stringResource(R.string.login),
-            onClick = { /*TODO*/ },
+            onClick = { goToScreen(MainActivity.Screens.INICIO) },
+            // TODO: Implementar el Login
         )
         Spacer(Modifier.height(20.dp))
         LoginScreenButton(
             text = stringResource(R.string.register),
-            onClick = { /*TODO*/ },
+            onClick = { goToScreen(MainActivity.Screens.INICIO) },
+            // TODO: Implementar el Register
         )
         Spacer(Modifier.height(20.dp))
         LoginScreenButton(
+            // TODO: Añadir un mensaje tipo: seguro que quieres continuar como invitado?
             text = stringResource(R.string.continue_as_guest),
-            onClick = { /*TODO*/ },
+            onClick = { goToScreen(MainActivity.Screens.INICIO) },
             transparent = true,
             fontSize = 16.sp
         )
@@ -61,7 +63,7 @@ fun LoginUI(){
 }
 
 @Composable
-fun AppNameBanner(){
+private fun AppNameBanner(){
     Image(
         painter = painterResource(R.drawable.login_screen_logo),
         contentDescription = stringResource(R.string.login_screen_logo),
@@ -72,7 +74,7 @@ fun AppNameBanner(){
 }
 
 @Composable
-fun LoginScreenButton(
+private fun LoginScreenButton(
     text: String,
     onClick: () -> Unit,
     transparent: Boolean = false,
@@ -86,7 +88,7 @@ fun LoginScreenButton(
         modifier = Modifier
             .fillMaxWidth(0.7f)
             .height(50.dp),
-        shape = RoundedCornerShape(50.dp),
+        shape = RoundedCornerShape(100),
         border = if(transparent) BorderStroke(2.dp, SignaDark) else null
     ) {
         Text(text = text, style = MaterialTheme.typography.body1, fontSize = fontSize)

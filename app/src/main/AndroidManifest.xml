@@ -15,7 +15,7 @@
         android:theme="@style/Theme.Signa"
         tools:targetApi="31">
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".view.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Signa">
@@ -29,6 +29,9 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
     </application>
 
 </manifest>

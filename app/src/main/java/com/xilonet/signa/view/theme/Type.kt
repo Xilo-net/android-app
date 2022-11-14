@@ -1,4 +1,4 @@
-package com.xilonet.signa.ui.theme
+package com.xilonet.signa.view.theme
 
 import androidx.compose.material.Typography
 import androidx.compose.ui.text.TextStyle
@@ -10,7 +10,8 @@ import com.xilonet.signa.R
 
 val Poppins = FontFamily(
     Font(R.font.poppins_extrabold, FontWeight.ExtraBold),
-    Font(R.font.poppins_semibold, FontWeight.SemiBold)
+    Font(R.font.poppins_semibold, FontWeight.SemiBold),
+    Font(R.font.poppins_medium, FontWeight.Medium)
 )
 
 // Set of Material typography styles to start with
@@ -27,6 +28,24 @@ val Typography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         color = SignaDark
+    ),
+    body2 = TextStyle(
+        fontFamily = Poppins,
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
+        color = SignaDark
+    ),
+    button = TextStyle(
+        fontFamily = Poppins,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp,
+        color = SignaDark
+    ),
+    subtitle1 = TextStyle(
+        fontFamily = Poppins,
+        fontWeight = FontWeight.Normal,
+        fontSize = 14.sp,
+        color = SignaDarkSemiTransparent
     )
     /* Other default text styles to override
     button = TextStyle(

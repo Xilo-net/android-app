@@ -13,4 +13,9 @@
     <string name="register">Registrarme</string>
     <string name="login_screen_logo">Logo de la aplicación</string>
     <string name="continue_as_guest">Continuar como invitado</string>
+    <string name="inicio">Inicio</string>
+    <string name="guest">Invitado</string>
+    <string name="diccionario">Diccionario</string>
+    <string name="quiz">Quiz</string>
+    <string name="search_bar_prompt">Buscar una palabra</string>
 </resources>
