@@ -3,6 +3,7 @@ package com.xilonet.signa.view
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.getValue
@@ -18,6 +19,7 @@ import com.xilonet.signa.view.theme.SignaTheme
 // TODO: MVM: Organize this thing well, MODEL/UI -> AS I SAW WITH JEFF.
 // TODO: Put the controller elsewhere (the screens stuff), remember what I did at Twitter
 // TODO: Implement Room (for the database), but see how to implement Security
+// TODO: Lock screen rotation
 class MainActivity : ComponentActivity() {
 
     enum class Screens {
@@ -34,11 +36,27 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = if(currentScreen == Screens.LOGIN) SignaGreen else SignaBackground,
                 ) {
-                    when(currentScreen){
-                        Screens.LOGIN -> LoginUI() {currentScreen = it}
-                        Screens.INICIO -> InicioUI() {currentScreen = it}
-                        Screens.DICCIONARIO -> DiccionarioUI() {currentScreen = it}
-                    }
+                        AnimatedVisibility(
+                            visible = currentScreen == Screens.LOGIN,
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                        ){
+                            LoginUI() {currentScreen = it}
+                        }
+                        AnimatedVisibility(
+                            visible = currentScreen == Screens.INICIO,
+                            enter = slideInHorizontally() + fadeIn(),
+                            exit = slideOutHorizontally() + fadeOut(),
+                        ){
+                            InicioUI() {currentScreen = it}
+                        }
+                        AnimatedVisibility(
+                            visible = currentScreen == Screens.DICCIONARIO,
+                            enter = slideInHorizontally() + fadeIn(),
+                            exit = slideOutHorizontally() + fadeOut(),
+                        ) {
+                            DiccionarioUI() {currentScreen = it}
+                        }
                 }
             }
         }
