@@ -20,6 +20,7 @@ import com.xilonet.signa.view.theme.SignaTheme
 // TODO: Put the controller elsewhere (the screens stuff), remember what I did at Twitter
 // TODO: Implement Room (for the database), but see how to implement Security
 // TODO: Lock screen rotation
+// TODO: Override back button actions
 class MainActivity : ComponentActivity() {
 
     enum class Screens {
@@ -55,7 +56,7 @@ class MainActivity : ComponentActivity() {
                             enter = slideInHorizontally() + fadeIn(),
                             exit = slideOutHorizontally() + fadeOut(),
                         ) {
-                            DiccionarioUI() {currentScreen = it}
+                            DiccionarioUI(applicationContext) {currentScreen = it}
                         }
                 }
             }
