@@ -26,7 +26,6 @@ class VideoFilesManager(ctxt: Context){
     }
 
     fun search(query: String) : List<LSMVideo> {
-        Log.d("SEARCH", query)
         return _allVideos.filter {it.name.lowercase().contains(query.lowercase())}.sortedBy{
             it.name
         }

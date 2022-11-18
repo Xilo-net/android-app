@@ -1,33 +1,49 @@
 package com.xilonet.signa.view
 
 import android.content.Context
-import android.provider.MediaStore.Video
-import android.widget.Toast
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.runtime.*
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
-import com.xilonet.signa.R
-import com.xilonet.signa.view.theme.*
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
+import com.google.android.exoplayer2.ui.StyledPlayerView
+import com.google.android.exoplayer2.upstream.DefaultDataSource
+import com.xilonet.signa.R
 import com.xilonet.signa.model.LSMVideo
 import com.xilonet.signa.model.VideoFilesManager
+import com.xilonet.signa.view.theme.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @Composable
 fun DiccionarioUI(context: Context, goToScreen: (MainActivity.Screens) -> Unit){
@@ -42,9 +58,9 @@ fun DiccionarioUI(context: Context, goToScreen: (MainActivity.Screens) -> Unit){
             { category = it },
             { searchQuery = it})
         if(category != ""){
-            VideoGrid(videoFilesManager.getVideosOfCategory(category))
+            VideoGrid(videoFilesManager.getVideosOfCategory(category), context)
         } else {
-            VideoGrid(videoFilesManager.search(searchQuery))
+            VideoGrid(videoFilesManager.search(searchQuery), context)
         }
     }
 }
@@ -102,7 +118,12 @@ private fun CategoryButton(text: String,
     Row(){
         ButtonSpacer()
         Button(
-            onClick = { changeCategory(text) },
+            onClick = {
+                changeCategory(text)
+                ClosePreviousVideo()
+                ClosePreviousVideo = {}
+                ScrollToTop()
+                },
             colors = ButtonDefaults.buttonColors(
                 backgroundColor = if(selected) SignaDark else SignaLight
             ),
@@ -126,6 +147,7 @@ private fun ButtonSpacer(){
 @Composable
 private fun SearchBar(changeCategory: (String) -> Unit, changeQuery: (String) -> Unit){
     var text by remember { mutableStateOf(TextFieldValue("")) }
+    val focusManager = LocalFocusManager.current
     TextField(value = text,
         onValueChange = {
                             text = it
@@ -136,9 +158,13 @@ private fun SearchBar(changeCategory: (String) -> Unit, changeQuery: (String) ->
                             } else {
                                 changeQuery("")
                             }
+                            ScrollToTop()
                         },
         colors = TextFieldDefaults.textFieldColors(textColor = SignaDark,
             backgroundColor = SignaLight,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent
         ),
         modifier = Modifier
             .fillMaxWidth(0.95f)
@@ -146,6 +172,8 @@ private fun SearchBar(changeCategory: (String) -> Unit, changeQuery: (String) ->
         shape = RoundedCornerShape(100),
         textStyle = MaterialTheme.typography.subtitle1,
         singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         leadingIcon = {
             Image(
                 painterResource(R.drawable.ic_baseline_search_24),
@@ -153,55 +181,144 @@ private fun SearchBar(changeCategory: (String) -> Unit, changeQuery: (String) ->
                 modifier = Modifier.height(24.dp),
                 alpha = 0.5f
             )
-        }
+        },
     )
 }
 
+lateinit var listState : LazyListState
+lateinit var coroutineScope : CoroutineScope
+
+private fun ScrollToTop(){
+    coroutineScope.launch {
+        listState.animateScrollToItem(index = 0)
+    }
+}
+
 @Composable
-private fun VideoGrid(videosToShow: List<LSMVideo>) {
+private fun VideoGrid(videosToShow: List<LSMVideo>, ctxt: Context) {
     // TODO: Make the 30 a variable
-    LazyColumn(){
+    val offset = with(LocalDensity.current) { -30.dp.roundToPx() } //TODO: This is slow?
+
+    listState = rememberLazyListState()
+    coroutineScope = rememberCoroutineScope()
+
+    LazyColumn(state = listState){
         item {
             Spacer(Modifier.height(30.dp))
         }
-        items(videosToShow){
-            video1 -> VideoRow(video1, video1)
+        itemsIndexed(videosToShow){
+            index, video -> VideoButtonRow(video, ctxt) {
+                coroutineScope.launch {
+                    listState.animateScrollToItem(index = index+1, scrollOffset = offset)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun VideoRow(video1: LSMVideo, video2: LSMVideo?) {
+private fun VideoButtonRow(video1: LSMVideo, ctxt: Context, scrollToMe: () -> Unit) {
     Column(Modifier.padding(horizontal = 30.dp)){
-        Box(){
-            Row(horizontalArrangement = Arrangement.Start, modifier = Modifier.fillMaxWidth()){
-                Spacer(Modifier.width(30.dp))
-                VideoButton(video1.name)
-            }
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()){
-                if(video2 != null) VideoButton(video2.name)
-                Spacer(Modifier.width(30.dp))
-            }
+        Row(horizontalArrangement = Arrangement.Start, modifier = Modifier.fillMaxWidth()){
+            VideoButton(video1.name, video1.path, ctxt, scrollToMe)
         }
         Spacer(Modifier.height(30.dp))
     }
 
 }
 
+private var ClosePreviousVideo = {}
+
 @Composable
 private fun VideoButton(videoName: String,
+                        videoPath: String,
+                        ctxt: Context,
+                        scrollToMe: () -> Unit,
                         icon: Painter = painterResource(R.drawable.ic_baseline_play_arrow_24)
 ) {
-    Button(
-        onClick = {/* TODO */},
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(backgroundColor = SignaLight),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(0.5.dp, SignaDark)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(icon, null, Modifier.size(80.dp))
-            Text(text = videoName, style = MaterialTheme.typography.body1, fontSize = 16.sp)
+    var videoOpen by remember {mutableStateOf(false)}
+    Row(){
+        Button(
+            onClick = {
+                if(!videoOpen){
+                    scrollToMe()
+                    ClosePreviousVideo()
+                    ClosePreviousVideo = {videoOpen = false}
+                }
+                videoOpen = !videoOpen
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(backgroundColor = SignaLight),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, SignaDark)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Image(icon, null, Modifier.size(80.dp))
+                Text(text = videoName, style = MaterialTheme.typography.body1, fontSize = 16.sp)
+                Spacer(Modifier.height(8.dp))
+                AnimatedVisibility(visible = videoOpen){
+                    ImageOrVideoPlayer(ctxt, videoPath)
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun ImageOrVideoPlayer(ctxt: Context, path: String){
+    // Detecta .jpg para imágenes
+    if(path.substring(path.length-3).lowercase() == "jpg"){
+        ImagePlayer(ctxt, path)
+    } else {
+        VideoPlayer(ctxt, path)
+    }
+}
+
+@Composable
+private fun ImagePlayer(ctxt: Context, imagePath: String){
+    Box(modifier = Modifier.clip(RoundedCornerShape(16.dp))
+        .border(width = 2.dp, color = SignaDark, shape = RoundedCornerShape(16.dp))
+    ){
+        Image(
+            BitmapFactory.decodeStream(ctxt.assets.open(imagePath)).asImageBitmap(),
+            null,
+            modifier = Modifier.aspectRatio(1.35f).clip(RoundedCornerShape(16.dp))
+        )
+    }
+}
+
+@Composable
+private fun VideoPlayer(ctxt: Context, videoPath: String){
+    val videoUri = Uri.parse("asset:///$videoPath")
+    // Declaring ExoPlayer
+    val exoPlayer = remember(ctxt) {
+        ExoPlayer.Builder(ctxt).build().apply {
+            val dataSourceFactory = DefaultDataSource.Factory(ctxt)
+            val source = ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(
+                MediaItem.fromUri(videoUri)
+            )
+            setMediaSource(source)
+            prepare()
+        }
+    }
+
+    exoPlayer.apply{
+        volume = 0f
+        playWhenReady = true
+        repeatMode = Player.REPEAT_MODE_ONE
+    }
+
+    Box(modifier = Modifier.clip(RoundedCornerShape(16.dp))
+        .border(width = 2.dp, color = SignaDark, shape = RoundedCornerShape(16.dp))
+    ){
+        // Implementing ExoPlayer
+        AndroidView(
+            factory = {context -> StyledPlayerView(context).apply {
+                player = exoPlayer
+                useController = false
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            }},
+            modifier = Modifier.aspectRatio(1.35f).clip(RoundedCornerShape(16.dp))
+        )
     }
 }
