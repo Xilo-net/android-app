@@ -5,13 +5,17 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.xilonet.signa.R
 import com.xilonet.signa.view.MainActivity
 
@@ -27,14 +31,13 @@ fun HeaderTitle(text: String){
 }
 
 @Composable
-//TODO: This button must do something lol
-fun BackButton(goBack: () -> Unit, downDp: Dp = 16.dp){
+fun BackButton(navController: NavController, downDp: Dp = 16.dp){
     Column() {
         Spacer(Modifier.height(downDp))
         Image(
             painterResource(R.drawable.ic_baseline_arrow_back_24),
             contentDescription = null,
-            modifier = Modifier.size(24.dp).clickable { goBack() }
+            modifier = Modifier.size(24.dp).clickable { navController.popBackStack() }
         )
     }
 }

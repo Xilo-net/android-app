@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavController
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
@@ -39,34 +40,39 @@ import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.xilonet.signa.R
+import com.xilonet.signa.controller.Screen
 import com.xilonet.signa.model.LSMVideo
 import com.xilonet.signa.model.VideoFilesManager
+import com.xilonet.signa.model.android.ExoPlayerManager
 import com.xilonet.signa.view.theme.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
-fun DiccionarioUI(context: Context, goToScreen: (MainActivity.Screens) -> Unit){
+fun DiccionarioUI(context: Context, navController: NavController){
+    //TODO: Make these rememberable?
     val videoFilesManager = VideoFilesManager(context)
+    val exoPlayerManager = ExoPlayerManager(context)
+    val categoryNames = videoFilesManager.getCategoryNames()
 
-    //TODO: This shouldn't be hardcoded
-    var category by remember {mutableStateOf("Abecedario")}
+    var category by remember {mutableStateOf(categoryNames[0])}
     var searchQuery by remember {mutableStateOf("")}
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        FullHeader(goToScreen, videoFilesManager.getCategoryNames(), category,
+        FullHeader(navController,
+            categoryNames, category,
             { category = it },
             { searchQuery = it})
         if(category != ""){
-            VideoGrid(videoFilesManager.getVideosOfCategory(category), context)
+            VideoGrid(videoFilesManager.getVideosOfCategory(category), context, exoPlayerManager)
         } else {
-            VideoGrid(videoFilesManager.search(searchQuery), context)
+            VideoGrid(videoFilesManager.search(searchQuery), context, exoPlayerManager)
         }
     }
 }
 
 @Composable
-private fun FullHeader(goToScreen: (MainActivity.Screens) -> Unit,
+private fun FullHeader(navController: NavController,
                        categoryNames: List<String>,
                        currentCategory: String,
                        changeCategory: (String) -> Unit,
@@ -85,7 +91,7 @@ private fun FullHeader(goToScreen: (MainActivity.Screens) -> Unit,
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(10.dp))
-                BackButton({goToScreen(MainActivity.Screens.INICIO)})
+                BackButton(navController)
             }
         }
         Spacer(Modifier.height(4.dp))
@@ -110,11 +116,11 @@ private fun ButtonBelt(categoryNames: List<String>, currentCategory: String,
     }
 }
 
-//TODO: Que si selecciono una categoría, se quiten las demás
 @Composable
 private fun CategoryButton(text: String,
                            selected: Boolean = false,
-                           changeCategory: (String) -> Unit){
+                           changeCategory: (String) -> Unit
+){
     Row(){
         ButtonSpacer()
         Button(
@@ -155,6 +161,8 @@ private fun SearchBar(changeCategory: (String) -> Unit, changeQuery: (String) ->
                             if(textString != ""){
                                 changeCategory("")
                                 changeQuery(textString)
+                                ClosePreviousVideo()
+                                ClosePreviousVideo = {}
                             } else {
                                 changeQuery("")
                             }
@@ -185,8 +193,8 @@ private fun SearchBar(changeCategory: (String) -> Unit, changeQuery: (String) ->
     )
 }
 
-lateinit var listState : LazyListState
-lateinit var coroutineScope : CoroutineScope
+private lateinit var listState : LazyListState
+private lateinit var coroutineScope : CoroutineScope
 
 private fun ScrollToTop(){
     coroutineScope.launch {
@@ -194,20 +202,24 @@ private fun ScrollToTop(){
     }
 }
 
+val SPACE_BETWEEN_VIDEOS = 30.dp
+
 @Composable
-private fun VideoGrid(videosToShow: List<LSMVideo>, ctxt: Context) {
-    // TODO: Make the 30 a variable
-    val offset = with(LocalDensity.current) { -30.dp.roundToPx() } //TODO: This is slow?
+private fun VideoGrid(videosToShow: List<LSMVideo>,
+                      ctxt: Context,
+                      exoPlayerManager: ExoPlayerManager
+) {
+    val offset = with(LocalDensity.current) { -SPACE_BETWEEN_VIDEOS.roundToPx() }
 
     listState = rememberLazyListState()
     coroutineScope = rememberCoroutineScope()
 
     LazyColumn(state = listState){
         item {
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(SPACE_BETWEEN_VIDEOS))
         }
         itemsIndexed(videosToShow){
-            index, video -> VideoButtonRow(video, ctxt) {
+            index, video -> VideoButtonRow(video, ctxt, exoPlayerManager) {
                 coroutineScope.launch {
                     listState.animateScrollToItem(index = index+1, scrollOffset = offset)
                 }
@@ -217,22 +229,28 @@ private fun VideoGrid(videosToShow: List<LSMVideo>, ctxt: Context) {
 }
 
 @Composable
-private fun VideoButtonRow(video1: LSMVideo, ctxt: Context, scrollToMe: () -> Unit) {
-    Column(Modifier.padding(horizontal = 30.dp)){
+private fun VideoButtonRow(video1: LSMVideo,
+                           ctxt: Context,
+                           exoPlayerManager: ExoPlayerManager,
+                           scrollToMe: () -> Unit
+) {
+    Column(Modifier.padding(horizontal = SPACE_BETWEEN_VIDEOS)){
         Row(horizontalArrangement = Arrangement.Start, modifier = Modifier.fillMaxWidth()){
-            VideoButton(video1.name, video1.path, ctxt, scrollToMe)
+            VideoButton(video1.name, video1.path, ctxt, exoPlayerManager, scrollToMe)
         }
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(SPACE_BETWEEN_VIDEOS))
     }
-
 }
 
+// We close the composable of the previous video (we must have only one at a time)
+// We'll put the content inside brackets when we create the video we'll later close
 private var ClosePreviousVideo = {}
 
 @Composable
 private fun VideoButton(videoName: String,
                         videoPath: String,
                         ctxt: Context,
+                        exoPlayerManager: ExoPlayerManager,
                         scrollToMe: () -> Unit,
                         icon: Painter = painterResource(R.drawable.ic_baseline_play_arrow_24)
 ) {
@@ -257,7 +275,7 @@ private fun VideoButton(videoName: String,
                 Text(text = videoName, style = MaterialTheme.typography.body1, fontSize = 16.sp)
                 Spacer(Modifier.height(8.dp))
                 AnimatedVisibility(visible = videoOpen){
-                    ImageOrVideoPlayer(ctxt, videoPath)
+                    ImageOrVideoPlayer(ctxt, videoPath, exoPlayerManager)
                 }
             }
         }
@@ -265,12 +283,12 @@ private fun VideoButton(videoName: String,
 }
 
 @Composable
-private fun ImageOrVideoPlayer(ctxt: Context, path: String){
+private fun ImageOrVideoPlayer(ctxt: Context, path: String, exoPlayerManager: ExoPlayerManager){
     // Detecta .jpg para imágenes
     if(path.substring(path.length-3).lowercase() == "jpg"){
         ImagePlayer(ctxt, path)
     } else {
-        VideoPlayer(ctxt, path)
+        VideoPlayer(ctxt, path, exoPlayerManager)
     }
 }
 
@@ -288,25 +306,8 @@ private fun ImagePlayer(ctxt: Context, imagePath: String){
 }
 
 @Composable
-private fun VideoPlayer(ctxt: Context, videoPath: String){
-    val videoUri = Uri.parse("asset:///$videoPath")
-    // Declaring ExoPlayer
-    val exoPlayer = remember(ctxt) {
-        ExoPlayer.Builder(ctxt).build().apply {
-            val dataSourceFactory = DefaultDataSource.Factory(ctxt)
-            val source = ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(
-                MediaItem.fromUri(videoUri)
-            )
-            setMediaSource(source)
-            prepare()
-        }
-    }
-
-    exoPlayer.apply{
-        volume = 0f
-        playWhenReady = true
-        repeatMode = Player.REPEAT_MODE_ONE
-    }
+private fun VideoPlayer(ctxt: Context, videoPath: String, exoPlayerManager: ExoPlayerManager){
+    val exoPlayer = remember(ctxt) { exoPlayerManager.getExoPlayer(videoPath) }
 
     Box(modifier = Modifier.clip(RoundedCornerShape(16.dp))
         .border(width = 2.dp, color = SignaDark, shape = RoundedCornerShape(16.dp))

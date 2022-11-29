@@ -18,4 +18,19 @@
     <string name="diccionario">Diccionario</string>
     <string name="quiz">Quiz</string>
     <string name="search_bar_prompt">Buscar una palabra</string>
+    <string name="incluir_categorias">Incluir categorías</string>
+    <string name="puntaje_acumulado">Puntaje acumulado:</string>
+    <string name="incluir_todas">INCLUIR TODAS</string>
+    <string name="quitar_todas">QUITAR TODAS</string>
+    <string name="jugar">Jugar</string>
+    <string name="puntos">Puntos:</string>
+    <string name="correo">Correo</string>
+    <string name="contrasena">Contraseña</string>
+    <string name="quiz_prompt">¿Cuál es esta palabra?</string>
+    <string name="timeout">¡Se acabó el tiempo!</string>
+    <string name="toca_para_continuar">Toca para continuar</string>
+    <string name="correcto">¡Correcto!</string>
+    <string name="incorrecto">Incorrecto</string>
+    <string name="game_over">¡Game Over!</string>
+    <string name="all_finished">¡Te acabaste todas las preguntas! ¡Felicitaciones!</string>
 </resources>

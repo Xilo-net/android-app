@@ -4,62 +4,56 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.xilonet.signa.R
+import com.xilonet.signa.controller.Screen
+import com.xilonet.signa.model.HTTPUserManager
 import com.xilonet.signa.view.theme.SignaDark
+import com.xilonet.signa.view.theme.SignaGreen
 import com.xilonet.signa.view.theme.SignaLight
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.Dispatcher
 
 @Composable
-fun LoginUI(goToScreen: (MainActivity.Screens) -> Unit){
-    // From top to bottom:
-    Column(
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.fillMaxHeight(0.15f))
-        AppNameBanner()
+fun LoginUI(navController: NavController){
+    Surface(Modifier.fillMaxSize(), color = SignaGreen){
+        // From top to bottom:
+        Column(
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(Modifier.fillMaxHeight(0.15f))
+            AppNameBanner()
+        }
+
+        // From bottom to top:
+        Column(
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            LoginFieldsAndButton() { navController.navigate(Screen.Inicio.route) }
+            Spacer(Modifier.fillMaxHeight(0.3f))
+        }
     }
 
-    // From bottom to top:
-    Column(
-        verticalArrangement = Arrangement.Bottom,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        LoginScreenButton(
-            text = stringResource(R.string.login),
-            onClick = { goToScreen(MainActivity.Screens.INICIO) },
-            // TODO: Implementar el Login
-        )
-        Spacer(Modifier.height(20.dp))
-        LoginScreenButton(
-            text = stringResource(R.string.register),
-            onClick = { goToScreen(MainActivity.Screens.INICIO) },
-            // TODO: Implementar el Register
-        )
-        Spacer(Modifier.height(20.dp))
-        LoginScreenButton(
-            // TODO: Añadir un mensaje tipo: seguro que quieres continuar como invitado?
-            text = stringResource(R.string.continue_as_guest),
-            onClick = { goToScreen(MainActivity.Screens.INICIO) },
-            transparent = true,
-            fontSize = 16.sp
-        )
-        Spacer(Modifier.fillMaxHeight(0.3f))
-    }
 }
 
 @Composable
@@ -73,24 +67,134 @@ private fun AppNameBanner(){
     )
 }
 
+private lateinit var coroutineScope : CoroutineScope
+
+//TODO: Make the app remember the Log-In?
 @Composable
-private fun LoginScreenButton(
+private fun LoginFieldsAndButton(goToInicio: () -> Unit){
+    var email by remember { mutableStateOf(TextFieldValue("")) }
+    var password by remember { mutableStateOf(TextFieldValue("")) }
+    var allowEdit by remember {mutableStateOf(true)}
+    val focusManager = LocalFocusManager.current
+    var showPassword by remember { mutableStateOf(false) }
+    coroutineScope = rememberCoroutineScope()
+
+    //Email
+    TextField(
+        value = email,
+        onValueChange = {email = it},
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        label = {Text(stringResource(R.string.correo))},
+        colors = TextFieldDefaults.textFieldColors(textColor = SignaDark,
+            backgroundColor = SignaLight,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            focusedLabelColor = SignaDark
+        ),
+        singleLine = true,
+        shape = RoundedCornerShape(10),
+        enabled = allowEdit
+    )
+
+    Spacer(Modifier.height(4.dp))
+
+    //Password
+    TextField(
+        value = password,
+        onValueChange = {password = it},
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done,
+                                            keyboardType = KeyboardType.Password),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        label = {Text(stringResource(R.string.contrasena))},
+        colors = TextFieldDefaults.textFieldColors(textColor = SignaDark,
+            backgroundColor = SignaLight,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            focusedLabelColor = SignaDark
+        ),
+        singleLine = true,
+        visualTransformation = if(showPassword)
+            VisualTransformation.None
+         else PasswordVisualTransformation(),
+        shape = RoundedCornerShape(10),
+        trailingIcon = {
+            val image = if (showPassword)
+                painterResource(R.drawable.ic_baseline_visibility_24)
+            else painterResource(R.drawable.ic_baseline_visibility_off_24)
+
+            IconButton(onClick = {showPassword = !showPassword}){
+                Icon(image, null)
+            }
+        },
+        enabled = allowEdit
+    )
+
+    //Log-in button
+    Spacer(Modifier.height(20.dp))
+    LoginScreenGenericButton(
+        text = stringResource(R.string.login),
+        enabled = allowEdit,
+        onClick = {
+            allowEdit = false
+            coroutineScope.launch(Dispatchers.IO) {
+                val userInfo = HTTPUserManager.tryLogIn(email.text, password.text)
+                coroutineScope.launch(Dispatchers.Main){
+                    if(userInfo == null){
+                        allowEdit = true
+                        //TODO: Show red and a message...
+                    } else {
+                        //TODO: Do I need to do something here so that the login info gets passed?
+                        goToInicio()
+                    }
+                }
+            }
+        },
+        // TODO: Implementar el Login
+    )
+
+    //Continue as guest button
+    Spacer(Modifier.height(20.dp))
+    LoginScreenGenericButton(
+        // TODO: Añadir un mensaje tipo: seguro que quieres continuar como invitado?
+        text = stringResource(R.string.continue_as_guest),
+        enabled = allowEdit,
+        onClick = {
+            HTTPUserManager.nullUserInfo()
+            goToInicio()
+        },
+        guest = true,
+        fontSize = 16.sp,
+        )
+}
+
+@Composable
+private fun LoginScreenGenericButton(
     text: String,
     onClick: () -> Unit,
-    transparent: Boolean = false,
+    enabled: Boolean,
+    guest: Boolean = false,
     fontSize: TextUnit = 20.sp
 ) {
     Button(
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = if(transparent) Color.Transparent else SignaLight,
+            backgroundColor = if(guest) Color.Transparent else SignaLight,
         ),
         modifier = Modifier
             .fillMaxWidth(0.7f)
             .height(50.dp),
         shape = RoundedCornerShape(100),
-        border = if(transparent) BorderStroke(2.dp, SignaDark) else null
+        border = if(guest) BorderStroke(2.dp, SignaDark) else null,
+        enabled = enabled
     ) {
-        Text(text = text, style = MaterialTheme.typography.body1, fontSize = fontSize)
+        if(!enabled && !guest){
+            CircularProgressIndicator()
+        } else {
+            Text(text = text, style = MaterialTheme.typography.body1, fontSize = fontSize)
+        }
     }
 }

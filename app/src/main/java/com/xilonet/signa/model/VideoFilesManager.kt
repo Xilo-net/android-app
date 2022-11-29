@@ -1,12 +1,12 @@
 package com.xilonet.signa.model
 
 import android.content.Context
-import android.util.Log
-import android.widget.Toast
+import java.text.Normalizer
+import java.util.*
+import kotlin.collections.HashSet
 
 
 class VideoFilesManager(ctxt: Context){
-    //TODO: Change this for a normal set? For performance purposes?
     private val _allVideos: HashSet<LSMVideo> = hashSetOf()
     private val _categories: HashSet<CategoryWithVideos> = hashSetOf()
 
@@ -26,9 +26,11 @@ class VideoFilesManager(ctxt: Context){
     }
 
     fun search(query: String) : List<LSMVideo> {
-        return _allVideos.filter {it.name.lowercase().contains(query.lowercase())}.sortedBy{
-            it.name
-        }
+        return _allVideos.filter {it.name.length >= query.length &&
+                                  it.name.lowercase().unaccent().substring(0, query.length) == (
+                                    query.lowercase().unaccent())}.sortedBy{
+                                        it.name.unaccent()
+                                    }
     }
 
     fun getCategoryNames() : List<String> {
@@ -42,3 +44,9 @@ class VideoFilesManager(ctxt: Context){
 
 data class LSMVideo(val name: String, val category: String, val path: String)
 data class CategoryWithVideos(val name: String, val videos: List<LSMVideo>)
+
+fun CharSequence.unaccent(): String {
+    val temp = Normalizer.normalize(this, Normalizer.Form.NFD)
+    return REGEX_UNACCENT.replace(temp, "")
+}
+private val REGEX_UNACCENT = "\\p{InCombiningDiacriticalMarks}+".toRegex()
