@@ -63,7 +63,6 @@ fun InicioUI(navController: NavController){
                     graphicBgColor = SignaRed,
                     icon = painterResource(id = R.drawable.quiz_icon),
                     onClick = {navController.navigate(Screen.QuizCustomizer.route)}
-                    //TODO: Que lleve al quiz y no al diccionario
                 )
             }
         }
@@ -98,7 +97,7 @@ private fun UserInfoBanner(
     profilePic: Painter = painterResource(R.drawable.guest_user_profile_pic)
 ){
     Button(
-        onClick = {/* TODO */},
+        onClick = {/* TODO: Se podría mostrar un drop-down con más información del usuario */},
         colors = ButtonDefaults.buttonColors(SignaLight),
         modifier = Modifier
             .fillMaxWidth(0.9f)

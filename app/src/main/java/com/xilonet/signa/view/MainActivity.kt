@@ -19,8 +19,11 @@ import com.xilonet.signa.view.theme.SignaBackground
 import com.xilonet.signa.view.theme.SignaGreen
 import com.xilonet.signa.view.theme.SignaTheme
 
-// TODO: Implement Room (for the database), but see how to implement Security
-// TODO: Usar un solo VideoFilesManager para toda la app
+/* TODO:
+    Para mejorar el rendimiento, se podría intentar usar un solo VideoFilesManager para toda la app,
+    en lugar de crear uno en cada pantalla que lo requiere. Recordemos que el VideoFilesManager
+    tiene un constructor de inicialización relativamente pesado.
+ */
 class MainActivity : ComponentActivity() {
 
     lateinit var navController: NavHostController

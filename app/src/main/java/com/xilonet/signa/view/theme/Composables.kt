@@ -8,8 +8,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -37,7 +39,9 @@ fun BackButton(navController: NavController, downDp: Dp = 16.dp){
         Image(
             painterResource(R.drawable.ic_baseline_arrow_back_24),
             contentDescription = null,
-            modifier = Modifier.size(24.dp).clickable { navController.popBackStack() }
+            modifier = Modifier.size(24.dp)
+                .clip(CircleShape)
+                .clickable { navController.popBackStack() }
         )
     }
 }

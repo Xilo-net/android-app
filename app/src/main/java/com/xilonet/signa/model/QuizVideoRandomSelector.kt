@@ -4,6 +4,8 @@ import android.content.Context
 import java.util.*
 import kotlin.random.Random.Default.nextInt
 
+// Básicamente es el Back-end del Quiz/Juego. Se encarga de administrar y entregar los videos y
+// opciones que salen.
 class QuizVideoRandomSelector(context: Context, categories: List<String>) {
     private val videos = Vector<LSMVideo>()
     private val videoFilesManager = VideoFilesManager(context)

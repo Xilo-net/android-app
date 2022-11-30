@@ -50,7 +50,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun DiccionarioUI(context: Context, navController: NavController){
-    //TODO: Make these rememberable?
     val videoFilesManager = VideoFilesManager(context)
     val exoPlayerManager = ExoPlayerManager(context)
     val categoryNames = videoFilesManager.getCategoryNames()

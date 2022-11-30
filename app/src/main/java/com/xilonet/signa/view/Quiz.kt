@@ -38,9 +38,13 @@ import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.google.android.exoplayer2.ui.TimeBar
 import com.xilonet.signa.R
+import com.xilonet.signa.model.HTTPUserManager
 import com.xilonet.signa.model.QuizVideoRandomSelector
 import com.xilonet.signa.model.android.ExoPlayerManager
 import com.xilonet.signa.view.theme.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 import java.util.*
 
@@ -48,13 +52,14 @@ enum class ScreenMode {
     PLAY, TIME_OUT, GAME_OVER, CORRECT, INCORRECT, ALL_FINISHED
 }
 
+private lateinit var coroutineScope: CoroutineScope
+
 @Composable
 fun QuizUI(context: Context, navController: NavController, categories: List<String>) {
-    //TODO: Be more careful with these three lines of code?
-    //TODO: GAMEOVER
+    coroutineScope = rememberCoroutineScope()
     val exoPlayerManager by remember {mutableStateOf(ExoPlayerManager(context))}
     val randomSelector by remember {mutableStateOf(QuizVideoRandomSelector(context, categories))}
-    var videoAndOptions by remember{mutableStateOf(randomSelector.getNextVideoAndOptions())} //TODO: This may be null
+    var videoAndOptions by remember{mutableStateOf(randomSelector.getNextVideoAndOptions())}
     var timerFillPortion by remember{mutableStateOf(1.0f)}
     var screenMode by remember {mutableStateOf(ScreenMode.PLAY)}
     var heartsLeft by remember {mutableStateOf(5)}
@@ -129,7 +134,7 @@ fun QuizUI(context: Context, navController: NavController, categories: List<Stri
                 }
             }
             ScreenMode.TIME_OUT -> {
-                AfterQuestionUI(stringResource(R.string.timeout), true) {
+                AfterQuestionUI(stringResource(R.string.timeout), true, false) {
                     videoAndOptions = randomSelector.getNextVideoAndOptions()
                     currentTimer?.cancel()
                     currentTimer = null
@@ -137,7 +142,7 @@ fun QuizUI(context: Context, navController: NavController, categories: List<Stri
                 }
             }
             ScreenMode.CORRECT -> {
-                AfterQuestionUI(stringResource(R.string.correcto), false) {
+                AfterQuestionUI(stringResource(R.string.correcto), false, false) {
                     videoAndOptions = randomSelector.getNextVideoAndOptions()
                     currentTimer?.cancel()
                     currentTimer = null
@@ -145,7 +150,7 @@ fun QuizUI(context: Context, navController: NavController, categories: List<Stri
                 }
             }
             ScreenMode.INCORRECT -> {
-                AfterQuestionUI(stringResource(R.string.incorrecto), true) {
+                AfterQuestionUI(stringResource(R.string.incorrecto), true, false) {
                     videoAndOptions = randomSelector.getNextVideoAndOptions()
                     currentTimer?.cancel()
                     currentTimer = null
@@ -153,15 +158,24 @@ fun QuizUI(context: Context, navController: NavController, categories: List<Stri
                 }
             }
             ScreenMode.GAME_OVER -> {
-                //TODO: Subir los puntos del usuario (y todo lo que toque)
-                AfterQuestionUI(stringResource(R.string.game_over), true) {
-                    navController.popBackStack()
+                AfterQuestionUI(stringResource(R.string.game_over), true, true) {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        HTTPUserManager.postScore(score)
+                        coroutineScope.launch(Dispatchers.Main){
+                            navController.popBackStack()
+                        }
+                    }
                 }
             }
             ScreenMode.ALL_FINISHED -> {
-                //TODO: Subir los puntos del usuario (y todo lo que toque)
-                AfterQuestionUI(stringResource(R.string.all_finished), false) {
-                    navController.popBackStack()
+                AfterQuestionUI(stringResource(R.string.all_finished), false, true) {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        HTTPUserManager.postScore(score)
+                        HTTPUserManager.postCategoryProgress(categories)
+                        coroutineScope.launch(Dispatchers.Main){
+                            navController.popBackStack()
+                        }
+                    }
                 }
             }
         }
@@ -197,7 +211,7 @@ private fun ScoreBanner(profilePic: Painter = painterResource(R.drawable.guest_u
                         score: Int = 0
 ){
     Button(
-        onClick = {/* TODO */},
+        onClick = {},
         colors = ButtonDefaults.buttonColors(SignaLight),
         modifier = Modifier
             .fillMaxWidth(0.5f)
@@ -342,7 +356,8 @@ private fun OptionButton(text: String, correct: Boolean,
 }
 
 @Composable
-private fun AfterQuestionUI(message: String, msgInRed: Boolean, onContinue: () -> Unit){
+private fun AfterQuestionUI(message: String, msgInRed: Boolean, mentionSaving: Boolean,
+                            onContinue: () -> Unit){
     val infiniteColorTransition = rememberInfiniteTransition()
     val color by infiniteColorTransition.animateColor(
         initialValue = SignaDark,
@@ -369,7 +384,9 @@ private fun AfterQuestionUI(message: String, msgInRed: Boolean, onContinue: () -
                 fontSize = 36.sp,
                 color = if(msgInRed) SignaRed else SignaGreen
             )
-            Text(text = stringResource(R.string.toca_para_continuar),
+            Text(text = if(mentionSaving) {
+                stringResource(R.string.toca_para_continuar_y_guardar)
+            } else {stringResource(R.string.toca_para_continuar)},
                 style = MaterialTheme.typography.body1,
                 color = color
             )

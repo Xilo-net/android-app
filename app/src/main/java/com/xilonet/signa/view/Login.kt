@@ -16,6 +16,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,7 @@ import com.xilonet.signa.model.HTTPUserManager
 import com.xilonet.signa.view.theme.SignaDark
 import com.xilonet.signa.view.theme.SignaGreen
 import com.xilonet.signa.view.theme.SignaLight
+import com.xilonet.signa.view.theme.SignaRed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -69,7 +71,6 @@ private fun AppNameBanner(){
 
 private lateinit var coroutineScope : CoroutineScope
 
-//TODO: Make the app remember the Log-In?
 @Composable
 private fun LoginFieldsAndButton(goToInicio: () -> Unit){
     var email by remember { mutableStateOf(TextFieldValue("")) }
@@ -77,7 +78,13 @@ private fun LoginFieldsAndButton(goToInicio: () -> Unit){
     var allowEdit by remember {mutableStateOf(true)}
     val focusManager = LocalFocusManager.current
     var showPassword by remember { mutableStateOf(false) }
+    var failedLogin by remember {mutableStateOf(false)}
     coroutineScope = rememberCoroutineScope()
+
+    if(failedLogin){
+        Text(stringResource(R.string.failed_login), style = MaterialTheme.typography.body2,
+                color = SignaRed, fontWeight = FontWeight.Bold)
+    }
 
     //Email
     TextField(
@@ -140,26 +147,24 @@ private fun LoginFieldsAndButton(goToInicio: () -> Unit){
         enabled = allowEdit,
         onClick = {
             allowEdit = false
+            failedLogin = false
             coroutineScope.launch(Dispatchers.IO) {
                 val userInfo = HTTPUserManager.tryLogIn(email.text, password.text)
                 coroutineScope.launch(Dispatchers.Main){
                     if(userInfo == null){
                         allowEdit = true
-                        //TODO: Show red and a message...
+                        failedLogin = true
                     } else {
-                        //TODO: Do I need to do something here so that the login info gets passed?
                         goToInicio()
                     }
                 }
             }
         },
-        // TODO: Implementar el Login
     )
 
     //Continue as guest button
     Spacer(Modifier.height(20.dp))
     LoginScreenGenericButton(
-        // TODO: Añadir un mensaje tipo: seguro que quieres continuar como invitado?
         text = stringResource(R.string.continue_as_guest),
         enabled = allowEdit,
         onClick = {
@@ -183,17 +188,18 @@ private fun LoginScreenGenericButton(
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(
             backgroundColor = if(guest) Color.Transparent else SignaLight,
+            disabledBackgroundColor = if(guest) Color.Transparent else SignaLight
         ),
         modifier = Modifier
             .fillMaxWidth(0.7f)
             .height(50.dp),
         shape = RoundedCornerShape(100),
-        border = if(guest) BorderStroke(2.dp, SignaDark) else null,
+        border = if(guest && enabled) BorderStroke(2.dp, SignaDark) else null,
         enabled = enabled
     ) {
         if(!enabled && !guest){
-            CircularProgressIndicator()
-        } else {
+            CircularProgressIndicator(modifier = Modifier.height(35.dp))
+        } else if(!(!enabled && guest)) {
             Text(text = text, style = MaterialTheme.typography.body1, fontSize = fontSize)
         }
     }

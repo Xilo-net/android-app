@@ -29,8 +29,10 @@
     <string name="quiz_prompt">¿Cuál es esta palabra?</string>
     <string name="timeout">¡Se acabó el tiempo!</string>
     <string name="toca_para_continuar">Toca para continuar</string>
+    <string name="toca_para_continuar_y_guardar">Toca para continuar y guardar</string>
     <string name="correcto">¡Correcto!</string>
     <string name="incorrecto">Incorrecto</string>
     <string name="game_over">¡Game Over!</string>
     <string name="all_finished">¡Te acabaste todas las preguntas! ¡Felicitaciones!</string>
+    <string name="failed_login">Email y/o contraseña incorrecto(s)</string>
 </resources>

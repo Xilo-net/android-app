@@ -1,10 +1,6 @@
 package com.xilonet.signa.view
 
 import android.content.Context
-import android.os.Build
-import android.util.Log
-import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -13,13 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.material.MaterialTheme.colors
-import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -33,16 +26,16 @@ import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.xilonet.signa.R
 import com.xilonet.signa.controller.Screen
-import com.xilonet.signa.model.LSMVideo
+import com.xilonet.signa.model.HTTPUserManager
 import com.xilonet.signa.model.VideoFilesManager
 import com.xilonet.signa.view.theme.*
-import java.util.*
 
 val SIDE_PADDING = 20.dp
 
 @Composable
 fun QuizCustomizerUI(context: Context, navController: NavController){
     val videoCategories = VideoFilesManager(context).getCategoryNames()
+    val userInfo = HTTPUserManager.getUserInfo()
     val categoryTotalCount = videoCategories.size
     val categoryToIsSelected = remember {mutableStateMapOf<String, Boolean>().apply{
             putAll(videoCategories.associateWith { true })
@@ -51,7 +44,7 @@ fun QuizCustomizerUI(context: Context, navController: NavController){
     var enablePlay = selectedCategoriesCount > 0
 
     Column(horizontalAlignment = Alignment.Start) {
-        FullHeader(navController)
+        FullHeader(navController, userInfo?.accumScore ?: 0)
         Column(modifier = Modifier.padding(horizontal = SIDE_PADDING)) {
             Spacer(Modifier.height(SIDE_PADDING))
             Row() {
@@ -92,12 +85,12 @@ fun QuizCustomizerUI(context: Context, navController: NavController){
 }
 
 @Composable
-private fun FullHeader(navController: NavController){
+private fun FullHeader(navController: NavController, accumScore: Int){
     Column(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .requiredHeight(120.dp)
+            .requiredHeight(if(accumScore != 0) 120.dp else 60.dp)
             .fillMaxWidth()
             .background(SignaGreen)
     ) {
@@ -110,17 +103,17 @@ private fun FullHeader(navController: NavController){
             }
         }
         Spacer(Modifier.height(8.dp))
-        HighscoreBanner()
+        if(accumScore != 0) AccumScoreBanner(accumScore = accumScore)
     }
 }
 
 @Composable
-private fun HighscoreBanner(
+private fun AccumScoreBanner(
     profilePic: Painter = painterResource(R.drawable.guest_user_profile_pic),
-    highscore: Int = 0
+    accumScore: Int = 0
 ){
     Button(
-        onClick = {/* TODO */},
+        onClick = {/* TODO: Se podría mostrar un drop-down con más información */},
         colors = ButtonDefaults.buttonColors(SignaLight),
         modifier = Modifier
             .fillMaxWidth(0.9f)
@@ -146,7 +139,7 @@ private fun HighscoreBanner(
         )
         Spacer(Modifier.weight(1f))
         Text(
-            text = highscore.toString(),
+            text = accumScore.toString(),
             style = MaterialTheme.typography.body2,
             textAlign = TextAlign.End,
             fontWeight = FontWeight.Bold
@@ -206,7 +199,6 @@ private fun CategoryButton(text: String,
     }
 }
 
-//TODO: Update app to only support Android N+?
 @Composable
 private fun SelectOrUnselectTwoButtons(categoryToIsSelected: MutableMap<String, Boolean>,
                                selectedCategoriesCount: Int,

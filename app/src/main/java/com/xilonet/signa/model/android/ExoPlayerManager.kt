@@ -8,6 +8,7 @@ import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSource
 
+// Se encarga del back-end de la reproducción de videos. También se encarga de limpiar memoria.
 class ExoPlayerManager(private val ctxt: Context) {
 
     // Holds the last ExoPlayer in order to release it when we create another one
